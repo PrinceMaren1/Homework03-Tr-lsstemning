@@ -15,17 +15,10 @@ message ServerBroadcast{
     string time = 2;
 }
 
-message Ack {
-    int64 newValue = 1;
+service ServerConnection {
+    rpc SendMessages(stream ClientMessage) returns (stream ServerBroadcast);
 }
 
-service SendMessage {
-    rpc SendMessage(stream ClientMessage) returns (stream ServerBroadcast);
-}
-
-service Broadcast {
-
-}
 
 
 
