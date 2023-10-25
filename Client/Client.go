@@ -18,7 +18,7 @@ func main(){
 	fmt.Println("Joining server")
 	
 	ConnectToServer()
-	defer ServerConn.Close()
+	
 	sendMessage()
 }
 
@@ -32,7 +32,9 @@ func ConnectToServer(){
 
 	fmt.Println("Client: %s: Attemps to dial on port 9000")
 
-	conn, err := grpc.Dial(fmt.Sprintf(":%s", "9000"), opts...)
+	var conn *grpc.ClientConn
+
+	conn, err := grpc.Dial(":9000", opts...)
 	if err != nil {
 		fmt.Println("Failed to Dial : %v", err)
 		return
@@ -50,8 +52,8 @@ func sendMessage(){
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Println("Lille test")
-
 	stream.Send(&gRPC.ClientMessage{ClientId: 1, Message: "Første test"})
+	for{
+		
+	}
 }

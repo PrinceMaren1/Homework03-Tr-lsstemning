@@ -13,9 +13,7 @@ import (
 
 type Server struct{
 	gRPC.UnimplementedServerConnectionServer
-
-	clientStreams map[int64] gRPC.ServerConnection_SendMessagesServer
-
+	clientStreams map[int64]gRPC.ServerConnection_SendMessagesServer
 }
 
 func main(){
@@ -27,39 +25,51 @@ func main(){
 }
 
 func launchServer() {
-	
+	fmt.Println("Start")
 	list, err := net.Listen("tcp", ":9000")
 	if err != nil{
 		fmt.Println("Failed to listen on port 9000: %v", err)
 		return;
 	}
-
+	fmt.Println("Listen")
 	grpcServer := grpc.NewServer()
+
+	server := &Server{
+		clientStreams: make(map[int64]gRPC.ServerConnection_SendMessagesServer),
+	}
+
+	gRPC.RegisterServerConnectionServer(grpcServer,server);
 	
+	fmt.Println("Server")
 	if err := grpcServer.Serve(list); err != nil{
 		fmt.Println("Failed to serve gRPC server over port 9000 %v", err)
 	}
+
+	fmt.Println("Server started")
 }
 
 func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer) error {
 
 	var id int64;
+	fmt.Print("Sendmessages")
 
 	for {
 		
 		msg, err := msgStream.Recv()
 		
-		fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
+		//fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
 		if err == io.EOF{
+			fmt.Print("break")
 			break
 		}
 		if err != nil {
+			fmt.Print(err)
 			return err
 		}
-
+		fmt.Print("Tilter")
 		id = msg.ClientId
 		clientMessage := msg.Message
-		s.clientStreams [id] = msgStream
+		s.clientStreams[id] = msgStream
 
 		fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
 
