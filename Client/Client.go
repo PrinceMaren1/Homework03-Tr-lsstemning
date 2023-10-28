@@ -58,9 +58,6 @@ func sendMessages() error {
 		for {
 			msg, err := stream.Recv()
 			if err == io.EOF {
-				// stream end from server
-				// should we stop execution of sendMessage() here?
-				fmt.Print("Shuting down")
 				return
 			}
 
@@ -77,6 +74,7 @@ func sendMessages() error {
 		fmt.Scan(&input)
 		if(input == "Disconnect"){
 			stream.CloseSend()
+			fmt.Print("Shuting down")
 			break
 		}else{
 			sendMessage(stream, input)

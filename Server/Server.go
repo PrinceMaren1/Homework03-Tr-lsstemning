@@ -79,8 +79,6 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 			continue
 		}
 
-		fmt.Printf("Server recived message from client %v: %v\n", msg.ClientId, msg.Message)
-
 		for key := range s.clientStreams {
 			if key != id {
 				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: time}
