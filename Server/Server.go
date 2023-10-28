@@ -28,7 +28,7 @@ func launchServer() {
 	fmt.Println("Start")
 	list, err := net.Listen("tcp", ":9000")
 	if err != nil{
-		fmt.Println("Failed to listen on port 9000: %v", err)
+		fmt.Printf("Failed to listen on port 9000: %v", err)
 		return;
 	}
 	fmt.Println("Listen")
@@ -42,7 +42,7 @@ func launchServer() {
 	
 	fmt.Println("Server")
 	if err := grpcServer.Serve(list); err != nil{
-		fmt.Println("Failed to serve gRPC server over port 9000 %v", err)
+		fmt.Printf("Failed to serve gRPC server over port 9000 %v", err)
 	}
 
 	fmt.Println("Server started")
@@ -51,7 +51,6 @@ func launchServer() {
 func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer) error {
 
 	var id int64;
-	fmt.Print("Sendmessages")
 
 	for {
 		
@@ -66,17 +65,16 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 			fmt.Print(err)
 			return err
 		}
-		fmt.Print("Tilter")
 		id = msg.ClientId
 		clientMessage := msg.Message
 		s.clientStreams[id] = msgStream
 
-		fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
+		fmt.Printf("Server recived message from client %v: %v", msg.ClientId, msg.Message)
 
 		for key := range s.clientStreams {
 			if key != id{
 				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: "test"}
-				s.clientStreams[key].(gRPC.ServerConnection_SendMessagesServer).Send(broadcast)
+				s.clientStreams[key].Send(broadcast)
 			}
 		}
 
