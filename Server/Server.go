@@ -15,22 +15,19 @@ type Server struct {
 	clientStreams map[string]gRPC.ServerConnection_SendMessagesServer
 }
 
+var time int = 0
+
 func main() {
-
 	fmt.Println("Starting server on port 9000")
-
 	launchServer()
-
 }
 
 func launchServer() {
-	fmt.Println("Start")
 	list, err := net.Listen("tcp", ":9000")
 	if err != nil {
-		fmt.Printf("Failed to listen on port 9000: %v", err)
+		fmt.Printf("Failed to listen on port 9000: %v\n", err)
 		return
 	}
-	fmt.Println("Listen")
 	grpcServer := grpc.NewServer()
 
 	server := &Server{
@@ -39,9 +36,8 @@ func launchServer() {
 
 	gRPC.RegisterServerConnectionServer(grpcServer, server)
 
-	fmt.Println("Server")
 	if err := grpcServer.Serve(list); err != nil {
-		fmt.Printf("Failed to serve gRPC server over port 9000 %v", err)
+		fmt.Printf("Failed to serve gRPC server over port 9000 %v\n", err)
 	}
 
 	fmt.Println("Server started")
@@ -52,7 +48,6 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 	var id string
 
 	for {
-
 		msg, err := msgStream.Recv()
 
 		//fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
@@ -68,7 +63,16 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 		clientMessage := msg.Message
 		s.clientStreams[id] = msgStream
 
-		fmt.Printf("Server recived message from client %v: %v", msg.ClientId, msg.Message)
+		if msg.Message == "EstablishConnection" {
+			welcomeMsg := fmt.Sprintf("Participant %v joined Chitty-Chat at Lamport time %v", msg.ClientId, "L")
+			for key := range s.clientStreams {
+				broadcast := &gRPC.ServerBroadcast{Message: welcomeMsg, Time: "test"}
+				s.clientStreams[key].Send(broadcast)
+			}
+			continue
+		}
+
+		fmt.Printf("Server recived message from client %v: %v\n", msg.ClientId, msg.Message)
 
 		for key := range s.clientStreams {
 			if key != id {
@@ -81,4 +85,8 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 
 	delete(s.clientStreams, id)
 	return nil
+}
+
+func updateTime(receivedTime int) {
+	time = max(receivedTime, time) + 1
 }
