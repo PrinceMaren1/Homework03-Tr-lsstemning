@@ -8,11 +8,12 @@ message ClientMessage{
     string clientId = 1;
     // This needs to be a maximum of 128 Characters
     string message = 2;
+    int64 time = 3;
 }
 
 message ServerBroadcast{
     string message = 1;
-    string time = 2;
+    int64 time = 2;
 }
 
 service ServerConnection {

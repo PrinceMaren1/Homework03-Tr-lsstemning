@@ -15,7 +15,7 @@ type Server struct {
 	clientStreams map[string]gRPC.ServerConnection_SendMessagesServer
 }
 
-var time int = 0
+var time int64 = 0
 
 func main() {
 	fmt.Println("Starting server on port 9000")
@@ -52,21 +52,28 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 
 		//fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
 		if err == io.EOF {
-			fmt.Print("break")
+			time = time + 1
+			for key := range s.clientStreams {
+				if key != id {
+					broadcast := &gRPC.ServerBroadcast{Message: fmt.Sprintf("Participant %v left Chitty-Chat at Lamport time %v",id, time), Time: time}
+					s.clientStreams[key].Send(broadcast)
+				}
+			}
 			break
 		}
 		if err != nil {
-			fmt.Print(err)
+			fmt.Print(err) 
 			return err
 		}
 		id = msg.ClientId
 		clientMessage := msg.Message
 		s.clientStreams[id] = msgStream
+		updateTime(msg.Time)
 
 		if msg.Message == "EstablishConnection" {
-			welcomeMsg := fmt.Sprintf("Participant %v joined Chitty-Chat at Lamport time %v", msg.ClientId, "L")
+			welcomeMsg := fmt.Sprintf("Participant %v joined Chitty-Chat at Lamport time %v", msg.ClientId, time)
 			for key := range s.clientStreams {
-				broadcast := &gRPC.ServerBroadcast{Message: welcomeMsg, Time: "test"}
+				broadcast := &gRPC.ServerBroadcast{Message: welcomeMsg, Time: time}
 				s.clientStreams[key].Send(broadcast)
 			}
 			continue
@@ -76,7 +83,7 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 
 		for key := range s.clientStreams {
 			if key != id {
-				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: "test"}
+				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: time}
 				s.clientStreams[key].Send(broadcast)
 			}
 		}
@@ -87,6 +94,6 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 	return nil
 }
 
-func updateTime(receivedTime int) {
+func updateTime(receivedTime int64) {
 	time = max(receivedTime, time) + 1
 }
