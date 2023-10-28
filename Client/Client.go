@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	gRPC "github.com/PrinceMaren1/Homework03-Tr-lsstemning/proto"
@@ -11,14 +12,15 @@ import (
 
 var server gRPC.ServerConnectionClient
 var ServerConn *grpc.ClientConn
+var id = flag.String("id", "", "client name")
 
-func main(){
-	
+func main() {
+	flag.Parse()
 	fmt.Println("New client")
 	fmt.Println("Joining server")
-	
+
 	ConnectToServer()
-	for{
+	for {
 		var input string
 		fmt.Scan(&input)
 		sendMessage(input)
@@ -26,10 +28,9 @@ func main(){
 
 }
 
+func ConnectToServer() {
 
-func ConnectToServer(){
-
-	opts := []grpc.DialOption {
+	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -46,15 +47,14 @@ func ConnectToServer(){
 
 	server = gRPC.NewServerConnectionClient(conn)
 	ServerConn = conn
-	fmt.Println("The connection is: ", conn.GetState().String()) 
-
+	fmt.Println("The connection is: ", conn.GetState().String())
 }
 
-func sendMessage(message string){
+func sendMessage(message string) {
 	stream, err := server.SendMessages(context.Background())
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	stream.Send(&gRPC.ClientMessage{ClientId: 1, Message: message})
+	stream.Send(&gRPC.ClientMessage{ClientId: *id, Message: message})
 }

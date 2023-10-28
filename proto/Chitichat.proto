@@ -5,7 +5,7 @@ package proto;
 option go_package = "github.com/PrinceMaren1/Homework03-Tr-lsstemning";
 
 message ClientMessage{
-    int64 clientId = 1;
+    string clientId = 1;
     // This needs to be a maximum of 128 Characters
     string message = 2;
 }
