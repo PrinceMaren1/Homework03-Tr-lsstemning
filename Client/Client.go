@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 
 	gRPC "github.com/PrinceMaren1/Homework03-Tr-lsstemning/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var time int = 0
 var server gRPC.ServerConnectionClient
 var ServerConn *grpc.ClientConn
 var id = flag.String("id", "", "client name")
@@ -20,12 +22,7 @@ func main() {
 	fmt.Println("Joining server")
 
 	ConnectToServer()
-	for {
-		var input string
-		fmt.Scan(&input)
-		sendMessage(input)
-	}
-
+	sendMessages()
 }
 
 func ConnectToServer() {
@@ -35,13 +32,13 @@ func ConnectToServer() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	fmt.Printf("Client: Attemps to dial on port 9000")
+	fmt.Printf("Client %v: Attemps to dial on port 9000\n", *id)
 
 	var conn *grpc.ClientConn
 
 	conn, err := grpc.Dial(":9000", opts...)
 	if err != nil {
-		fmt.Printf("Failed to Dial : %v", err)
+		fmt.Printf("Failed to Dial : %v\n", err)
 		return
 	}
 
@@ -50,11 +47,42 @@ func ConnectToServer() {
 	fmt.Println("The connection is: ", conn.GetState().String())
 }
 
-func sendMessage(message string) {
-	stream, err := server.SendMessages(context.Background())
-	if err != nil {
-		fmt.Println(err)
-		return
+func sendMessages() error {
+	stream, _ := server.SendMessages(context.Background())
+	// ...
+	sendMessage(stream, "EstablishConnection")
+
+	go func() {
+		for {
+			msg, err := stream.Recv()
+
+			if err == io.EOF {
+				// stream end from server
+				// should we stop execution of sendMessage() here?
+				fmt.Print("break")
+				break
+			}
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			fmt.Printf("Time: %v. Message: %v\n", msg.Time, msg.Message)
+		}
+	}()
+
+	for {
+		var input string
+		fmt.Scan(&input)
+		sendMessage(stream, input)
 	}
+}
+
+func sendMessage(stream gRPC.ServerConnection_SendMessagesClient, message string) {
+	time = time + 1
 	stream.Send(&gRPC.ClientMessage{ClientId: *id, Message: message})
+}
+
+func updateTime(receivedTime int) {
+	time = max(receivedTime, time) + 1
 }
