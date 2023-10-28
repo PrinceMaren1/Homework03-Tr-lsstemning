@@ -10,13 +10,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-
-type Server struct{
+type Server struct {
 	gRPC.UnimplementedServerConnectionServer
-	clientStreams map[int64]gRPC.ServerConnection_SendMessagesServer
+	clientStreams map[string]gRPC.ServerConnection_SendMessagesServer
 }
 
-func main(){
+func main() {
 
 	fmt.Println("Starting server on port 9000")
 
@@ -27,21 +26,21 @@ func main(){
 func launchServer() {
 	fmt.Println("Start")
 	list, err := net.Listen("tcp", ":9000")
-	if err != nil{
+	if err != nil {
 		fmt.Printf("Failed to listen on port 9000: %v", err)
-		return;
+		return
 	}
 	fmt.Println("Listen")
 	grpcServer := grpc.NewServer()
 
 	server := &Server{
-		clientStreams: make(map[int64]gRPC.ServerConnection_SendMessagesServer),
+		clientStreams: make(map[string]gRPC.ServerConnection_SendMessagesServer),
 	}
 
-	gRPC.RegisterServerConnectionServer(grpcServer,server);
-	
+	gRPC.RegisterServerConnectionServer(grpcServer, server)
+
 	fmt.Println("Server")
-	if err := grpcServer.Serve(list); err != nil{
+	if err := grpcServer.Serve(list); err != nil {
 		fmt.Printf("Failed to serve gRPC server over port 9000 %v", err)
 	}
 
@@ -50,14 +49,14 @@ func launchServer() {
 
 func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer) error {
 
-	var id int64;
+	var id string
 
 	for {
-		
+
 		msg, err := msgStream.Recv()
-		
+
 		//fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
-		if err == io.EOF{
+		if err == io.EOF {
 			fmt.Print("break")
 			break
 		}
@@ -72,7 +71,7 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 		fmt.Printf("Server recived message from client %v: %v", msg.ClientId, msg.Message)
 
 		for key := range s.clientStreams {
-			if key != id{
+			if key != id {
 				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: "test"}
 				s.clientStreams[key].Send(broadcast)
 			}
@@ -80,6 +79,6 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 
 	}
 
-	delete(s.clientStreams,id)
+	delete(s.clientStreams, id)
 	return nil
 }
