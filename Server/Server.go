@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+
 	//"log"
 	"io"
 	"net"
@@ -19,6 +22,15 @@ var time int64 = 0
 
 func main() {
 	fmt.Println("Starting server on port 9000")
+
+	// File logging adapted from example at https://stackoverflow.com/questions/40443881/how-to-write-log-into-log-files-in-golang
+	f, err := os.OpenFile("log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+
 	launchServer()
 }
 
@@ -50,39 +62,44 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 	for {
 		msg, err := msgStream.Recv()
 
-		//fmt.Println("Server recived message from %s: %s", msg.ClientId, msg.Message)
 		if err == io.EOF {
+			// A client disconnected
+			// New event (sending messages to clients), so time is incremented
 			time = time + 1
 			for key := range s.clientStreams {
 				if key != id {
-					broadcast := &gRPC.ServerBroadcast{Message: fmt.Sprintf("Participant %v left Chitty-Chat at Lamport time %v",id, time), Time: time}
-					s.clientStreams[key].Send(broadcast)
+					sendMessage(fmt.Sprintf("Participant %v left Chitty-Chat at Lamport time %v", id, time), key, s.clientStreams[key])
 				}
 			}
 			break
 		}
 		if err != nil {
-			fmt.Print(err) 
+			// Unknown error
+			fmt.Print(err)
 			return err
 		}
 		id = msg.ClientId
 		clientMessage := msg.Message
 		s.clientStreams[id] = msgStream
-		updateTime(msg.Time)
+		updateTime(msg.Time) // Update lamport time from msg
 
+		// New event (sending messages to clients), so time is incremented
+		// Multiple identical messages sent to different clients are viewed as one event, and are therefore send with identical timestamp
+		time = time + 1
+
+		// Time event / messages happens
 		if msg.Message == "EstablishConnection" {
-			welcomeMsg := fmt.Sprintf("Participant %v joined Chitty-Chat at Lamport time %v", msg.ClientId, time)
+			// time-1 because we already incremented time for the new message event, but the connection was received beforehand
+			welcomeMsg := fmt.Sprintf("Participant %v joined Chitty-Chat at Lamport time %v", msg.ClientId, time-1)
 			for key := range s.clientStreams {
-				broadcast := &gRPC.ServerBroadcast{Message: welcomeMsg, Time: time}
-				s.clientStreams[key].Send(broadcast)
+				sendMessage(welcomeMsg, key, s.clientStreams[key])
 			}
 			continue
 		}
 
 		for key := range s.clientStreams {
 			if key != id {
-				broadcast := &gRPC.ServerBroadcast{Message: clientMessage, Time: time}
-				s.clientStreams[key].Send(broadcast)
+				sendMessage(clientMessage, key, s.clientStreams[key])
 			}
 		}
 
@@ -90,6 +107,12 @@ func (s *Server) SendMessages(msgStream gRPC.ServerConnection_SendMessagesServer
 
 	delete(s.clientStreams, id)
 	return nil
+}
+
+func sendMessage(message string, clientId string, stream gRPC.ServerConnection_SendMessagesServer) {
+	log.Printf("Sending to message to %v at time %v with content: %v", clientId, time, message)
+	broadcast := &gRPC.ServerBroadcast{Message: message, Time: time}
+	stream.Send(broadcast)
 }
 
 func updateTime(receivedTime int64) {
