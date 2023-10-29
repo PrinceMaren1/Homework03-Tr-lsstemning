@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
+	"os"
 
 	gRPC "github.com/PrinceMaren1/Homework03-Tr-lsstemning/proto"
 	"google.golang.org/grpc"
@@ -21,6 +23,14 @@ func main() {
 	fmt.Println("New client")
 	fmt.Println("Joining server")
 
+	// File logging adapted from example at https://stackoverflow.com/questions/40443881/how-to-write-log-into-log-files-in-golang
+	logFile := "log_" + *id
+	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
 
 	ConnectToServer()
 	defer ServerConn.Close()
@@ -65,18 +75,23 @@ func sendMessages() error {
 				fmt.Println(err)
 			}
 			updateTime(msg.Time)
-			fmt.Printf("Time: %v. Message: %v\n", msg.Time, msg.Message)
+			log.Printf("Time: %v. Message received: %v\n", msg.Time, msg.Message)
+			fmt.Printf("Time: %v. Message received: %v\n", msg.Time, msg.Message)
 		}
 	}()
 
 	for {
 		var input string
 		fmt.Scan(&input)
-		if(input == "Disconnect"){
+		if input == "Disconnect" {
 			stream.CloseSend()
 			fmt.Print("Shuting down")
 			break
-		}else{
+			// This len check is unsafe for weird characters
+			// see https://golangbyexample.com/length-of-string-golang/
+		} else if len(input) > 180 {
+			fmt.Println("Message max length is about 180 chars")
+		} else {
 			sendMessage(stream, input)
 		}
 	}
@@ -85,7 +100,8 @@ func sendMessages() error {
 
 func sendMessage(stream gRPC.ServerConnection_SendMessagesClient, message string) {
 	time = time + 1
-	stream.Send(&gRPC.ClientMessage{ClientId: *id, Message: message})
+	log.Printf("Sending message to server with time %v", time)
+	stream.Send(&gRPC.ClientMessage{ClientId: *id, Message: message, Time: time})
 }
 
 func updateTime(receivedTime int64) {
