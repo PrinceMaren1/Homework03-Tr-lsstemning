@@ -85,10 +85,10 @@ func sendMessages() error {
 		fmt.Scan(&input)
 		if input == "Disconnect" {
 			stream.CloseSend()
-			fmt.Print("Shuting down")
+			fmt.Print("Shutting down")
 			break
-		} else if len([]rune(input)) > 180 {
-			fmt.Println("Message max length is about 180 chars")
+		} else if len([]rune(input)) > 128 {
+			fmt.Println("Max length of message is 128 characters")
 		} else {
 			sendMessage(stream, input)
 		}
