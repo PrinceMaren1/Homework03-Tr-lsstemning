@@ -63,6 +63,7 @@ func sendMessages() error {
 	stream, _ := server.SendMessages(context.Background())
 	// ...
 	sendMessage(stream, "EstablishConnection")
+	waitc := make(chan struct{})
 
 	go func() {
 		for {
@@ -84,8 +85,8 @@ func sendMessages() error {
 		var input string
 		fmt.Scan(&input)
 		if input == "Disconnect" {
-			stream.CloseSend()
 			fmt.Print("Shutting down")
+			close(waitc)
 			break
 		} else if len([]rune(input)) > 128 {
 			fmt.Println("Max length of message is 128 characters")
@@ -93,6 +94,9 @@ func sendMessages() error {
 			sendMessage(stream, input)
 		}
 	}
+
+	stream.CloseSend()
+	<-waitc
 	return nil
 }
 
