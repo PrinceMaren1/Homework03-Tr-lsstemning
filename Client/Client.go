@@ -85,7 +85,7 @@ func sendMessages() error {
 		var input string
 		fmt.Scan(&input)
 		if input == "Disconnect" {
-			fmt.Print("Shutting down")
+			fmt.Print("Shutting down \n")
 			close(waitc)
 			break
 		} else if len([]rune(input)) > 128 {
