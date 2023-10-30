@@ -87,9 +87,7 @@ func sendMessages() error {
 			stream.CloseSend()
 			fmt.Print("Shuting down")
 			break
-			// This len check is unsafe for weird characters
-			// see https://golangbyexample.com/length-of-string-golang/
-		} else if len(input) > 180 {
+		} else if len([]rune(input)) > 180 {
 			fmt.Println("Message max length is about 180 chars")
 		} else {
 			sendMessage(stream, input)
