@@ -102,7 +102,7 @@ func sendMessages() error {
 
 func sendMessage(stream gRPC.ServerConnection_SendMessagesClient, message string) {
 	time = time + 1
-	log.Printf("Sending message to server with time %v", time)
+	log.Printf("Sending message to server with time %v, and content: %v", time, message)
 	stream.Send(&gRPC.ClientMessage{ClientId: *id, Message: message, Time: time})
 }
 
